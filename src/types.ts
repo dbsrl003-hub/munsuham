@@ -14,12 +14,12 @@ export interface User {
 
 export type Category = 
   | '전체' 
-  | '사례관리' 
-  | '프로그램/기획' 
-  | '회계/정산' 
-  | '행정/인사' 
-  | '시설/안전' 
-  | '후원/홍보';
+  | '이용자' 
+  | '활동지원사' 
+  | '회계서류' 
+  | '행정서류' 
+  | '후원/홍보' 
+  | '기타';
 
 export type FileType = 'hwp' | 'hwpx' | 'xlsx' | 'xls' | 'pdf';
 

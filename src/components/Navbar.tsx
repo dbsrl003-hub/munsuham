@@ -23,6 +23,8 @@ interface NavbarProps {
   pendingCount: number;
   isCloudConnected: boolean;
   onOpenCloudConfig: () => void;
+  onOpenLogin: () => void;
+  onLogout: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -34,7 +36,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenUploadModal,
   pendingCount,
   isCloudConnected,
-  onOpenCloudConfig
+  onOpenCloudConfig,
+  onOpenLogin,
+  onLogout
 }) => {
   const [userDropdownOpen, setUserDropdownOpen] = React.useState(false);
 
@@ -64,14 +68,18 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="sticky top-0 z-40 bg-paper/95 backdrop-blur-md border-b border-fog shadow-sm">
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 h-18 flex items-center justify-between gap-3 py-3">
-        {/* Brand / Logo */}
-        <div className="flex items-center gap-2.5 flex-shrink-0">
-          <div className="w-9 h-9 rounded-xl bg-forest-ink flex items-center justify-center text-lime-voltage shadow-subtle flex-shrink-0">
+        {/* Brand / Logo (클릭 시 기관 공용 서식함으로 이동) */}
+        <div 
+          onClick={() => onSelectTab('PUBLIC')}
+          className="flex items-center gap-2.5 flex-shrink-0 cursor-pointer group transition-transform active:scale-95"
+          title="기관 공용 서식함으로 이동"
+        >
+          <div className="w-9 h-9 rounded-xl bg-forest-ink flex items-center justify-center text-lime-voltage shadow-subtle flex-shrink-0 group-hover:bg-forest-light transition-colors">
             <FileText className="w-5 h-5 stroke-[2.5]" />
           </div>
           <div className="whitespace-nowrap">
             <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-lg sm:text-xl tracking-tight text-forest-ink">복지서식함</span>
+              <span className="font-extrabold text-lg sm:text-xl tracking-tight text-forest-ink group-hover:text-spruce transition-colors">복지서식함</span>
               <span className="text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded bg-lime-voltage/30 text-forest-ink uppercase">VAULT</span>
             </div>
             <p className="text-[10px] text-slate hidden md:block">사회복지 공용 서식 &amp; 암호 해제 플랫폼</p>
@@ -241,10 +249,25 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ))}
                 </div>
 
-                <div className="pt-2 border-t border-fog px-2">
-                  <div className="text-[11px] text-slate bg-linen-light p-2 rounded-md">
-                    💡 사회복지 현장 관리자와 직원의 권한 제어를 실제 테스트해 볼 수 있습니다.
-                  </div>
+                <div className="pt-2 border-t border-fog px-2 space-y-1.5">
+                  <button
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      onOpenLogin();
+                    }}
+                    className="w-full text-center py-1.5 rounded-pill bg-linen-mist hover:bg-lime-voltage text-forest-ink text-xs font-bold transition-all"
+                  >
+                    다른 계정으로 로그인 (admin / 1130)
+                  </button>
+                  <button
+                    onClick={() => {
+                      setUserDropdownOpen(false);
+                      onLogout();
+                    }}
+                    className="w-full text-center py-1 rounded-pill text-pebble hover:text-alarm-red hover:bg-alarm-light text-[11px] font-semibold transition-all"
+                  >
+                    로그아웃
+                  </button>
                 </div>
               </div>
             )}

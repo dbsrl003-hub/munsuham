@@ -27,6 +27,7 @@ export const PasswordDecryptor: React.FC = () => {
   const [resultState, setResultState] = useState<{
     status: 'IDLE' | 'SUCCESS' | 'ERROR';
     message?: string;
+    actionGuide?: string;
     blob?: Blob;
     outputName?: string;
   }>({ status: 'IDLE' });
@@ -125,7 +126,8 @@ export const PasswordDecryptor: React.FC = () => {
       } else {
         setResultState({
           status: 'ERROR',
-          message: res.errorMessage || '암호 해제에 실패했습니다. 올바른 비밀번호인지 확인해주세요.'
+          message: res.errorMessage || '암호 해제에 실패했습니다. 올바른 비밀번호인지 확인해주세요.',
+          actionGuide: res.actionGuide
         });
       }
     } catch (err: any) {
@@ -167,7 +169,7 @@ export const PasswordDecryptor: React.FC = () => {
               문서 암호 해제 센터
             </h2>
             <p className="text-sm text-slate-200/80 leading-relaxed max-w-xl">
-              지자체 공문, 회계 증빙, 외부 공모자료 등 기존 비밀번호를 알고 있는 문서의 암호를 즉시 영구 해제하여 새 문서로 변환합니다.
+              지자체 공문, 회계 증빙, 외부 공모자료 등 기존 비밀번호를 알고 있는 PDF 및 엑셀 문서의 암호를 영구 해제합니다.
             </p>
           </div>
 
@@ -179,6 +181,34 @@ export const PasswordDecryptor: React.FC = () => {
             <p className="text-[11px] text-slate-300">
               업로드된 파일과 입력한 암호는 서버로 일절 전송되지 않으며, 사용자 브라우저 내부에서만 복호화 후 즉시 파기됩니다.
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* 한글(HWP/HWPX) 문서 안내 배너 */}
+      <div className="p-5 rounded-card bg-amber-50 border-2 border-amber-300 text-charcoal shadow-sm space-y-3">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <h4 className="text-sm font-bold text-amber-950 mb-1">
+              📢 한글(HWP, HWPX) 문서 암호 해제 이용 안내
+            </h4>
+            <p className="text-xs text-amber-900 leading-relaxed">
+              한글 문서는 <strong>보안 및 권한(라이선스)의 이유로 웹 브라우저에서 직접 암호해제 기능을 사용하지 못합니다.</strong><br />
+              한글 파일의 암호를 해제하시려면 아래의 <strong>한글과컴퓨터 공식 해제 방법</strong>을 이용해 주세요.
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white/90 p-3.5 rounded-md border border-amber-200 text-xs text-charcoal leading-relaxed space-y-1">
+          <div className="font-bold text-forest-ink">■ 한글 문서 암호 10초 해제 방법 (한컴오피스):</div>
+          <ol className="list-decimal list-inside space-y-0.5 text-slate pl-1">
+            <li>한글 프로그램에서 파일을 열고 비밀번호를 입력합니다.</li>
+            <li>상단 메뉴 <strong>[보안]</strong> (또는 [파일]) → <strong>[문서 암호 변경/해제]</strong> 클릭</li>
+            <li><strong>[암호 해제]</strong>를 선택하고 [해제] 버튼을 누른 후 문서를 <strong>[저장(Ctrl+S)]</strong>합니다.</li>
+          </ol>
+          <div className="text-[11px] text-pebble pt-1">
+            ※ 배포용 문서인 경우: 상단 메뉴 [보안] → [배포용 문서 변경/해제]에서 비밀번호를 입력하시면 편집 제한이 해제됩니다.
           </div>
         </div>
       </div>
@@ -342,14 +372,20 @@ export const PasswordDecryptor: React.FC = () => {
         )}
 
         {resultState.status === 'ERROR' && (
-          <div className="mt-6 p-4 rounded-card bg-rose-50 border border-rose-200 text-rose-900 animate-in fade-in-50">
+          <div className="mt-6 p-5 rounded-card bg-amber-50/80 border border-amber-300 text-charcoal animate-in fade-in-50 space-y-3">
             <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-rose-600 mt-0.5 flex-shrink-0" />
+              <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
               <div>
-                <h4 className="text-sm font-bold text-rose-950 mb-1">암호 해제 실패</h4>
-                <p className="text-xs text-rose-800">{resultState.message}</p>
+                <h4 className="text-sm font-bold text-amber-950 mb-1">암호 해제 안내</h4>
+                <p className="text-xs text-amber-900 leading-relaxed">{resultState.message}</p>
               </div>
             </div>
+
+            {resultState.actionGuide && (
+              <div className="bg-white/80 p-4 rounded-md border border-amber-200 text-xs text-charcoal whitespace-pre-wrap font-mono leading-relaxed">
+                {resultState.actionGuide}
+              </div>
+            )}
           </div>
         )}
       </div>

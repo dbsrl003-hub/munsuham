@@ -8,18 +8,16 @@ export interface DecryptResult {
   decryptedBlob?: Blob;
   outputFileName?: string;
   errorMessage?: string;
+  actionGuide?: string;
 }
 
 /**
  * 안전한 파일 다운로드 트리거
- * Webview, iframe, 보안 쿠키 차단 환경에서도 네비게이션 간섭 없이 순수 다운로드를 수행합니다.
  */
 export async function triggerBlobDownload(blob: Blob, fileName: string): Promise<void> {
-  // 1. 브라우저가 페이지로 열지 않고 반드시 파일 다운로드로 처리하도록 application/octet-stream으로 래핑
   const safeBlob = new Blob([blob], { type: 'application/octet-stream' });
 
-  // 2. Data URL 생성 (가장 안전하며 iframe 보안 쿠키 프록시를 우회함)
-  if (safeBlob.size < 25 * 1024 * 1024) { // 25MB 이하일 경우 Data URL 사용
+  if (safeBlob.size < 25 * 1024 * 1024) {
     try {
       const reader = new FileReader();
       const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -41,11 +39,10 @@ export async function triggerBlobDownload(blob: Blob, fileName: string): Promise
       }, 500);
       return;
     } catch (e) {
-      console.warn('Data URL 변환 실패, Blob URL 방식으로 대체합니다:', e);
+      console.warn('Data URL 변환 대체:', e);
     }
   }
 
-  // 3. 대용량 파일 또는 FileReader 실패 시 Blob URL 방식
   const url = URL.createObjectURL(safeBlob);
   const a = document.createElement('a');
   a.style.display = 'none';
@@ -58,11 +55,11 @@ export async function triggerBlobDownload(blob: Blob, fileName: string): Promise
   setTimeout(() => {
     if (document.body.contains(a)) document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, 10000); // 10초 대기로 다운로드 완료 보장
+  }, 10000);
 }
 
 /**
- * PDF 문서 암호 해제
+ * 1. PDF 문서 암호 해제 (권한 제한 및 비밀번호 해제)
  */
 export async function decryptPdfFile(
   file: File,
@@ -70,15 +67,22 @@ export async function decryptPdfFile(
 ): Promise<DecryptResult> {
   try {
     const arrayBuffer = await file.arrayBuffer();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pdfDoc = await PDFDocument.load(arrayBuffer, {
-      password: password,
-      ignoreEncryption: false
-    } as any);
 
-    const decryptedBytes = await pdfDoc.save();
+    // 1단계: ignoreEncryption: true로 문서 로드
+    const sourceDoc = await PDFDocument.load(arrayBuffer, {
+      ignoreEncryption: true
+    });
+
+    // 2단계: 완전히 새로운 빈 PDF 문서를 생성하여 페이지들을 복사 (암호화 메타데이터 완전 박멸)
+    const cleanDoc = await PDFDocument.create();
+    const pageIndices = sourceDoc.getPageIndices();
+    const copiedPages = await cleanDoc.copyPages(sourceDoc, pageIndices);
+    copiedPages.forEach((page) => cleanDoc.addPage(page));
+
+    // 3단계: 암호가 없는 깨끗한 PDF 바이트 저장
+    const decryptedBytes = await cleanDoc.save();
     const blob = new Blob([decryptedBytes], { type: 'application/octet-stream' });
-    const outputName = file.name.replace(/\.pdf$/i, '_unlocked.pdf');
+    const outputName = file.name.replace(/\.pdf$/i, '_암호해제.pdf');
 
     return {
       success: true,
@@ -87,21 +91,20 @@ export async function decryptPdfFile(
     };
   } catch (err: any) {
     const msg = err?.message || String(err);
-    if (msg.includes('password') || msg.includes('decrypt') || msg.includes('Password') || msg.includes('Encrypted')) {
-      return {
-        success: false,
-        errorMessage: '입력하신 비밀번호가 올바르지 않거나 암호화 알고리즘이 호환되지 않습니다.'
-      };
-    }
     return {
       success: false,
-      errorMessage: `PDF 해제 오류: ${msg}`
+      errorMessage: `PDF 열기 암호(User Password)가 걸려있는 고도화된 보안 문서입니다. 브라우저에서 인쇄(Ctrl+P) → [PDF로 저장]을 선택하시면 암호가 제거된 PDF로 즉시 추출할 수 있습니다. (${msg})`,
+      actionGuide: `■ PDF 문서 암호 3초 해결 방법:
+1. 크롬 또는 엣지 브라우저에서 해당 PDF 파일을 열고 비밀번호를 입력합니다.
+2. 우측 상단 인쇄 아이콘 (또는 Ctrl + P) 클릭
+3. 대상을 [PDF로 저장]으로 선택 후 [저장] 클릭
+→ 저장된 새 PDF는 비밀번호가 완전히 제거되어 자유롭게 열립니다.`
     };
   }
 }
 
 /**
- * 엑셀 문서 암호 해제 (xlsx, xls)
+ * 2. 엑셀 문서 암호 해제 (xlsx, xls)
  */
 export async function decryptExcelFile(
   file: File,
@@ -109,13 +112,14 @@ export async function decryptExcelFile(
 ): Promise<DecryptResult> {
   try {
     const arrayBuffer = await file.arrayBuffer();
+    
     const workbook = XLSX.read(arrayBuffer, {
       type: 'array',
       password: password
     });
 
     if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
-      throw new Error('워크북을 읽을 수 없거나 비밀번호가 일치하지 않습니다.');
+      throw new Error('비밀번호가 일치하지 않거나 엑셀 내용을 읽을 수 없습니다.');
     }
 
     const outBuffer = XLSX.write(workbook, {
@@ -126,7 +130,7 @@ export async function decryptExcelFile(
     const blob = new Blob([outBuffer], {
       type: 'application/octet-stream'
     });
-    const outputName = file.name.replace(/\.(xlsx|xls)$/i, '_unlocked.xlsx');
+    const outputName = file.name.replace(/\.(xlsx|xls)$/i, '_암호해제.xlsx');
 
     return {
       success: true,
@@ -134,50 +138,39 @@ export async function decryptExcelFile(
       outputFileName: outputName
     };
   } catch (err: any) {
-    const msg = err?.message || '';
     return {
       success: false,
-      errorMessage: msg.includes('password') || msg.includes('encrypted')
-        ? '입력하신 엑셀 비밀번호가 일치하지 않습니다.'
-        : '엑셀 암호 해제에 실패했습니다. 암호를 다시 확인해 주세요.'
+      errorMessage: '엑셀 암호 해제에 실패했습니다. 최신 오피스 강력 암호화(Agile) 문서의 경우 엑셀 프로그램에서 [파일 → 정보 → 통합문서보호 → 암호설정 해제]를 이용해주세요.',
+      actionGuide: `■ 엑셀 문서 암호 해제 방법:
+1. 엑셀에서 파일을 열고 암호를 입력합니다.
+2. 좌측 상단 [파일] → [정보] 클릭
+3. [통합 문서 보호] 클릭 → [암호 설정] 클릭
+4. 기존에 적혀있는 동그라미(●●●●) 암호를 모두 지우고 [확인]을 누른 뒤 [저장]합니다.`
     };
   }
 }
 
 /**
- * 한글 문서 암호 해제 (HWP, HWPX)
+ * 3. 한글 문서 (HWP, HWPX) 안내
  */
 export async function decryptHwpFile(
   file: File,
   password: string
 ): Promise<DecryptResult> {
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    const isHwpx = file.name.toLowerCase().endsWith('.hwpx');
-    const ext = isHwpx ? '.hwpx' : '.hwp';
+  const isHwpx = file.name.toLowerCase().endsWith('.hwpx');
+  const ext = isHwpx ? '.hwpx' : '.hwp';
 
-    if (!password || password.trim().length === 0) {
-      return {
-        success: false,
-        errorMessage: '문서의 기존 비밀번호를 입력해주세요.'
-      };
-    }
+  return {
+    success: false,
+    errorMessage: `한글(${ext.toUpperCase()}) 문서는 보안 및 권한의 이유로 웹 브라우저에서 직접 암호해제 기능을 사용하지 못합니다. 한글과컴퓨터 공식 프로그램을 통해 아래 방법으로 암호를 해제해 주세요.`,
+    actionGuide: `■ 한글 문서 암호 해제 방법 (한컴오피스):
+1. 한글 프로그램에서 해당 파일을 열고 비밀번호를 입력합니다.
+2. 상단 메뉴 [보안] (또는 [파일]) 클릭
+3. [문서 암호 변경/해제] 클릭
+4. [암호 해제]를 선택하고 [해제] 버튼 클릭 후 [저장(Ctrl+S)]합니다.
 
-    const cleanBytes = new Uint8Array(arrayBuffer);
-    const blob = new Blob([cleanBytes], { type: 'application/octet-stream' });
-    const outputName = file.name.replace(new RegExp(`\\${ext}$`, 'i'), `_unlocked${ext}`);
-
-    return {
-      success: true,
-      decryptedBlob: blob,
-      outputFileName: outputName
-    };
-  } catch (err: any) {
-    return {
-      success: false,
-      errorMessage: `한글 문서 처리 중 오류 발생: ${err?.message || err}`
-    };
-  }
+※ 배포용 문서인 경우: 상단 메뉴 [보안] → [배포용 문서 변경/해제]에서 암호 입력 후 해제 가능합니다.`
+  };
 }
 
 /**
@@ -204,7 +197,7 @@ export async function decryptDocument(
 }
 
 /**
- * 서식 다운로드 지원 헬퍼 (IndexedDB 저장 파일 우선 조회 후 다운로드)
+ * 서식 다운로드 지원 헬퍼
  */
 export async function downloadSampleOrBlob(doc: {
   id: string;
@@ -215,7 +208,6 @@ export async function downloadSampleOrBlob(doc: {
   fileData?: Blob | ArrayBuffer;
   sampleContentUrl?: string;
 }) {
-  // 1. Supabase Storage에 저장된 경로가 있는 경우 스토리지에서 다운로드
   if (doc.sampleContentUrl && doc.sampleContentUrl.startsWith('documents/')) {
     const supabaseBlob = await getFileBlobFromSupabase(doc.sampleContentUrl);
     if (supabaseBlob) {
@@ -224,47 +216,19 @@ export async function downloadSampleOrBlob(doc: {
     }
   }
 
-  // 2. 사용자가 직접 업로드하여 IndexedDB에 저장된 로컬 원본 파일이 있는지 확인
   const savedBlob = await getFileFromIndexedDB(doc.id);
   if (savedBlob) {
     await triggerBlobDownload(savedBlob, doc.fileName);
     return;
   }
 
-  // 3. 메모리 상에 fileData가 존재하는 경우
   if (doc.fileData && (doc.fileData instanceof Blob || doc.fileData instanceof ArrayBuffer)) {
     const blob = doc.fileData instanceof Blob ? doc.fileData : new Blob([doc.fileData], { type: 'application/octet-stream' });
     await triggerBlobDownload(blob, doc.fileName);
     return;
   }
 
-  // 3. 실무 샘플 서식 실시간 동적 생성
-  if (doc.fileType === 'xlsx' || doc.fileType === 'xls') {
-    const wb = XLSX.utils.book_new();
-    const wsData = [
-      [`[${doc.category}] ${doc.title}`],
-      ['문서 생성일', new Date().toLocaleDateString('ko-KR')],
-      ['소속기관', '사회복지법인 스마트복지재단'],
-      [''],
-      ['No', '항목/내용', '기준단가', '수량', '합계금액', '비고'],
-      [1, '사업 운영비 및 강사비', 150000, 2, 300000, '전문강사 지급'],
-      [2, '교재 및 교구 구입비', 25000, 20, 500000, '대상자 교재'],
-      [3, '다과 및 식대비', 12000, 20, 240000, '회기별 다과'],
-      ['합계', '', '', '', '=SUM(E6:E8)', '공동모금회 기준 준수']
-    ];
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    XLSX.utils.book_append_sheet(wb, ws, '서식내용');
-    const outBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([outBuffer], { type: 'application/octet-stream' });
-    await triggerBlobDownload(blob, doc.fileName);
-  } else if (doc.fileType === 'pdf') {
-    const content = `%PDF-1.4\n%사회복지 현장 표준 서식: ${doc.title}\n카테고리: ${doc.category}\n발행: 스마트복지관 서식보관함\n`;
-    const blob = new Blob([content], { type: 'application/octet-stream' });
-    await triggerBlobDownload(blob, doc.fileName);
-  } else {
-    // HWP / HWPX 파일 실무 서식
-    const content = `[서식 제목] ${doc.title}\n[분류] ${doc.category}\n[문서 설명]\n본 서식은 사회복지 현장에서 표준으로 활용되는 공용 문서입니다.\n\n■ 주요 기재 사항:\n1. 대상자 기본정보 및 사정 내용\n2. 세부 사업 실행계획 및 기대효과\n3. 관련 법령 및 기관 내부 결재 라인 준수\n\n(작성일: ${new Date().toLocaleDateString('ko-KR')})`;
-    const blob = new Blob([content], { type: 'application/octet-stream' });
-    await triggerBlobDownload(blob, doc.fileName);
-  }
+  const content = `[서식 제목] ${doc.title}\n[분류] ${doc.category}\n본 문서는 복지서식함에 등록된 서식입니다.\n(등록일: ${new Date().toLocaleDateString('ko-KR')})`;
+  const blob = new Blob([content], { type: 'application/octet-stream' });
+  await triggerBlobDownload(blob, doc.fileName);
 }

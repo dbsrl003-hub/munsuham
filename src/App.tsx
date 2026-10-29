@@ -22,6 +22,7 @@ import {
   incrementDownloadCountInSupabase
 } from './utils/supabaseClient';
 import { SupabaseConfigModal } from './components/SupabaseConfigModal';
+import { LoginModal } from './components/LoginModal';
 import { Lock, Clock, CheckCircle2, ShieldAlert } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -31,11 +32,18 @@ export const App: React.FC = () => {
     return saved ? JSON.parse(saved) : INITIAL_USERS;
   });
 
-  const [currentUserId, setCurrentUserId] = useState<string>(() => {
-    return localStorage.getItem('welfare_current_user_id') || 'user-admin';
+  // 세션 복원 또는 기본 admin 자동 세션
+  const [currentUser, setCurrentUser] = useState<User>(() => {
+    const savedSession = localStorage.getItem('welfare_auth_session');
+    if (savedSession) {
+      try {
+        return JSON.parse(savedSession);
+      } catch (e) {}
+    }
+    return INITIAL_USERS[0];
   });
 
-  const currentUser = users.find(u => u.id === currentUserId) || users[0];
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   // 2. 문서 서식 데이터
   const [documents, setDocuments] = useState<DocumentForm[]>(() => {
@@ -91,9 +99,27 @@ export const App: React.FC = () => {
     localStorage.setItem('welfare_users', JSON.stringify(users));
   }, [users]);
 
-  useEffect(() => {
-    localStorage.setItem('welfare_current_user_id', currentUserId);
-  }, [currentUserId]);
+  // 로그인 및 세션 관리
+  const handleLogin = (user: User, autoLogin: boolean) => {
+    setCurrentUser(user);
+    if (autoLogin) {
+      localStorage.setItem('welfare_auth_session', JSON.stringify(user));
+    } else {
+      sessionStorage.setItem('welfare_auth_session', JSON.stringify(user));
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('welfare_auth_session');
+    sessionStorage.removeItem('welfare_auth_session');
+    // 기본 admin 세션으로 리셋하거나 로그인 모달 표시
+    setIsLoginModalOpen(true);
+  };
+
+  const handleSwitchUser = (user: User) => {
+    setCurrentUser(user);
+    localStorage.setItem('welfare_auth_session', JSON.stringify(user));
+  };
 
   useEffect(() => {
     localStorage.setItem('welfare_documents', JSON.stringify(documents));
@@ -185,7 +211,7 @@ export const App: React.FC = () => {
         id: docId,
         title: formData.title || '새 서식',
         description: formData.description || '',
-        category: formData.category || '사례관리',
+        category: formData.category || '이용자',
         fileType: formData.fileType || 'hwp',
         fileName: formData.fileName || (file ? file.name : '서식문서.hwp'),
         fileSize: formData.fileSize || (file ? `${(file.size / 1024).toFixed(1)} KB` : '100 KB'),
@@ -279,7 +305,7 @@ export const App: React.FC = () => {
       {/* Top Navbar */}
       <Navbar
         currentUser={currentUser}
-        onSwitchUser={(user) => setCurrentUserId(user.id)}
+        onSwitchUser={handleSwitchUser}
         allUsers={users}
         currentTab={currentTab}
         onSelectTab={setCurrentTab}
@@ -290,6 +316,8 @@ export const App: React.FC = () => {
         pendingCount={pendingCount}
         isCloudConnected={isSupabaseConfigured()}
         onOpenCloudConfig={() => setIsCloudModalOpen(true)}
+        onOpenLogin={() => setIsLoginModalOpen(true)}
+        onLogout={handleLogout}
       />
 
       {/* Main Container */}
@@ -317,7 +345,7 @@ export const App: React.FC = () => {
               <button
                 onClick={() => {
                   const admin = users.find(u => u.role === 'ADMIN') || users[0];
-                  setCurrentUserId(admin.id);
+                  handleSwitchUser(admin);
                   setCurrentTab('ADMIN');
                 }}
                 className="px-4 py-2 rounded-pill bg-forest-ink hover:bg-forest-dark text-lime-voltage text-xs font-bold transition-all shadow-sm"
@@ -447,6 +475,14 @@ export const App: React.FC = () => {
         isOpen={isCloudModalOpen}
         onClose={() => setIsCloudModalOpen(false)}
         onConfigChanged={() => setCloudVersion(v => v + 1)}
+      />
+
+      {/* Login & Authentication Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLogin={handleLogin}
+        allUsers={users}
       />
     </div>
   );

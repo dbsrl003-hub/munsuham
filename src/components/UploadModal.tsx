@@ -30,7 +30,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<Exclude<Category, '전체'>>('사례관리');
+  const [category, setCategory] = useState<Exclude<Category, '전체'>>('이용자');
   const [fileType, setFileType] = useState<FileType>('hwp');
   const [isPublic, setIsPublic] = useState(true);
   const [tagsInput, setTagsInput] = useState('');
@@ -48,7 +48,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     } else {
       setTitle('');
       setDescription('');
-      setCategory('사례관리');
+      setCategory('이용자');
       setFileType('hwp');
       setIsPublic(true);
       setTagsInput('');
