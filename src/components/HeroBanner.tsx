@@ -55,7 +55,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               onClick={onGoDecrypt}
               className="px-6 py-3 rounded-pill bg-transparent hover:bg-white/10 text-paper border border-paper/30 font-semibold text-sm sm:text-base transition-all flex items-center gap-2"
             >
-              <span>문서 암호 해제 바로가기</span>
+              <span>PDF 암호 해제 바로가기</span>
             </button>
           </div>
         </div>

@@ -13,10 +13,14 @@ import {
   EyeOff,
   RefreshCw,
   Clock,
-  Trash2
+  Trash2,
+  Printer,
+  ExternalLink,
+  HelpCircle,
+  FileSpreadsheet
 } from 'lucide-react';
 import { decryptDocument, triggerBlobDownload } from '../utils/fileDecryption';
-import { DecryptHistoryItem, FileType } from '../types';
+import { DecryptHistoryItem } from '../types';
 
 export const PasswordDecryptor: React.FC = () => {
   const [dragActive, setDragActive] = useState(false);
@@ -24,6 +28,8 @@ export const PasswordDecryptor: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [fileObjectUrl, setFileObjectUrl] = useState<string | null>(null);
+
   const [resultState, setResultState] = useState<{
     status: 'IDLE' | 'SUCCESS' | 'ERROR';
     message?: string;
@@ -72,23 +78,20 @@ export const PasswordDecryptor: React.FC = () => {
 
   const handleFile = (file: File) => {
     const ext = file.name.split('.').pop()?.toLowerCase();
-    const allowed = ['hwp', 'hwpx', 'xlsx', 'xls', 'pdf'];
-    if (!ext || !allowed.includes(ext)) {
-      alert('지원하지 않는 형식입니다. HWP, HWPX, XLSX, XLS, PDF 파일만 업로드할 수 있습니다.');
+    if (ext !== 'pdf') {
+      alert('PDF 파일(.pdf)만 업로드할 수 있습니다.\n\n한글(HWP) 및 엑셀(XLSX) 문서는 보안/권한 제한으로 인해 웹에서 해제되지 않으며, 화면 상단의 한컴오피스/엑셀 공식 해제 가이드를 이용해주세요.');
       return;
     }
     setSelectedFile(file);
+    const objUrl = URL.createObjectURL(file);
+    setFileObjectUrl(objUrl);
     setResultState({ status: 'IDLE' });
   };
 
   const handleDecrypt = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFile) {
-      alert('파일을 먼저 업로드해 주세요.');
-      return;
-    }
-    if (!password.trim()) {
-      alert('문서의 기존 비밀번호를 입력해 주세요.');
+      alert('PDF 파일을 먼저 업로드해 주세요.');
       return;
     }
 
@@ -96,7 +99,6 @@ export const PasswordDecryptor: React.FC = () => {
     setResultState({ status: 'IDLE' });
 
     try {
-      // 살짝의 시각적 체감을 위해 가상 딜레이
       await new Promise(r => setTimeout(r, 600));
 
       const res = await decryptDocument(selectedFile, password);
@@ -106,27 +108,25 @@ export const PasswordDecryptor: React.FC = () => {
           status: 'SUCCESS',
           blob: res.decryptedBlob,
           outputName: res.outputFileName,
-          message: '문서의 암호가 성공적으로 해제되었습니다! 아래 버튼을 눌러 암호 없는 파일을 다운로드하세요.'
+          message: 'PDF 암호화 속성이 성공적으로 해제되었습니다! 아래 버튼을 눌러 저장하거나 인쇄창을 이용해 보세요.'
         });
 
-        // 히스토리 추가
-        const ext = selectedFile.name.split('.').pop()?.toLowerCase() as FileType;
         const newItem: DecryptHistoryItem = {
           id: 'dec-' + Date.now(),
           fileName: res.outputFileName,
-          fileType: ext || 'pdf',
+          fileType: 'pdf',
           fileSize: `${(selectedFile.size / 1024).toFixed(1)} KB`,
           decryptedAt: new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
           status: 'SUCCESS'
         };
         saveHistory([newItem, ...history.slice(0, 9)]);
 
-        // 자동으로 1차 다운로드 실행
-        triggerBlobDownload(res.decryptedBlob, res.outputFileName);
+        // 1차 다운로드 실행
+        await triggerBlobDownload(res.decryptedBlob, res.outputFileName);
       } else {
         setResultState({
           status: 'ERROR',
-          message: res.errorMessage || '암호 해제에 실패했습니다. 올바른 비밀번호인지 확인해주세요.',
+          message: res.errorMessage || 'PDF 암호 해제에 실패했습니다.',
           actionGuide: res.actionGuide
         });
       }
@@ -141,35 +141,36 @@ export const PasswordDecryptor: React.FC = () => {
   };
 
   const handleReset = () => {
+    if (fileObjectUrl) URL.revokeObjectURL(fileObjectUrl);
     setSelectedFile(null);
+    setFileObjectUrl(null);
     setPassword('');
     setResultState({ status: 'IDLE' });
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // 테스트 샘플 파일 즉시 생성 및 다운로드 (사용자 실습용)
-  const createTestProtectedFile = async () => {
-    const content = '사회복지 현장 비밀보장 문서 샘플입니다. 테스트 비밀번호는 1234 입니다.';
-    const blob = new Blob([content], { type: 'application/octet-stream' });
-    await triggerBlobDownload(blob, '암호설정테스트_결재문서.hwp');
-    alert('테스트용 파일이 다운로드되었습니다!\n해당 파일 업로드 후 암호에 "1234"를 입력하여 해제 테스트를 진행해보세요.');
+  // 브라우저 뷰어 열기 (원클릭 인쇄/저장)
+  const openPdfInBrowser = () => {
+    if (!selectedFile) return;
+    const url = URL.createObjectURL(selectedFile);
+    window.open(url, '_blank');
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Header Info Banner */}
       <div className="bg-forest-ink text-paper rounded-largeCard p-6 sm:p-8 relative overflow-hidden shadow-darkCard">
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-pill bg-lime-voltage/20 text-lime-voltage text-xs font-bold uppercase mb-3">
               <FolderLock className="w-3.5 h-3.5" />
-              <span>Smart Document Decryptor</span>
+              <span>PDF Security Unlocker</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-paper tracking-tight mb-2">
-              문서 암호 해제 센터
+              PDF 파일 암호 해제 센터
             </h2>
             <p className="text-sm text-slate-200/80 leading-relaxed max-w-xl">
-              지자체 공문, 회계 증빙, 외부 공모자료 등 기존 비밀번호를 알고 있는 PDF 및 엑셀 문서의 암호를 영구 해제합니다.
+              지자체 공문, 회계 영수증, 주민센터 서류 등 비밀번호가 설정된 PDF 파일의 암호를 해제하여 인쇄·편집 가능한 문서로 변환합니다.
             </p>
           </div>
 
@@ -178,37 +179,57 @@ export const PasswordDecryptor: React.FC = () => {
               <ShieldCheck className="w-4 h-4" />
               <span>안전한 100% 인메모리 처리</span>
             </div>
-            <p className="text-[11px] text-slate-300">
-              업로드된 파일과 입력한 암호는 서버로 일절 전송되지 않으며, 사용자 브라우저 내부에서만 복호화 후 즉시 파기됩니다.
+            <p className="text-[11px] text-slate-300 leading-normal">
+              업로드된 파일과 입력한 암호는 서버로 전송되지 않으며, 사용자 컴퓨터 브라우저 안에서만 안전하게 처리됩니다.
             </p>
           </div>
         </div>
       </div>
 
-      {/* 한글(HWP/HWPX) 문서 안내 배너 */}
+      {/* 한글 & 엑셀 문서 암호 해제 불가 및 공식 해결 방법 안내 배너 */}
       <div className="p-5 rounded-card bg-amber-50 border-2 border-amber-300 text-charcoal shadow-sm space-y-3">
         <div className="flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
           <div className="flex-1">
             <h4 className="text-sm font-bold text-amber-950 mb-1">
-              📢 한글(HWP, HWPX) 문서 암호 해제 이용 안내
+              📢 한글(HWP) 및 엑셀(XLSX) 문서 암호 해제 불가 안내
             </h4>
             <p className="text-xs text-amber-900 leading-relaxed">
-              한글 문서는 <strong>보안 및 권한(라이선스)의 이유로 웹 브라우저에서 직접 암호해제 기능을 사용하지 못합니다.</strong><br />
-              한글 파일의 암호를 해제하시려면 아래의 <strong>한글과컴퓨터 공식 해제 방법</strong>을 이용해 주세요.
+              한글 및 엑셀 문서는 <strong>보안 및 권한(라이선스)의 이유로 웹 브라우저에서 직접 암호해제 기능을 지원하지 못합니다.</strong><br />
+              한글과 엑셀 파일의 암호 해제가 필요하신 경우, 아래의 <strong>공식 오피스 프로그램 해제 방법</strong>을 이용해 주세요.
             </p>
           </div>
         </div>
 
-        <div className="bg-white/90 p-3.5 rounded-md border border-amber-200 text-xs text-charcoal leading-relaxed space-y-1">
-          <div className="font-bold text-forest-ink">■ 한글 문서 암호 10초 해제 방법 (한컴오피스):</div>
-          <ol className="list-decimal list-inside space-y-0.5 text-slate pl-1">
-            <li>한글 프로그램에서 파일을 열고 비밀번호를 입력합니다.</li>
-            <li>상단 메뉴 <strong>[보안]</strong> (또는 [파일]) → <strong>[문서 암호 변경/해제]</strong> 클릭</li>
-            <li><strong>[암호 해제]</strong>를 선택하고 [해제] 버튼을 누른 후 문서를 <strong>[저장(Ctrl+S)]</strong>합니다.</li>
-          </ol>
-          <div className="text-[11px] text-pebble pt-1">
-            ※ 배포용 문서인 경우: 상단 메뉴 [보안] → [배포용 문서 변경/해제]에서 비밀번호를 입력하시면 편집 제한이 해제됩니다.
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+          {/* 한글 안내 */}
+          <div className="bg-white/95 p-3.5 rounded-md border border-amber-200 text-xs leading-relaxed space-y-1">
+            <div className="font-bold text-blue-900 flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-blue-600" />
+              <span>한글(HWP, HWPX) 10초 암호 해제:</span>
+            </div>
+            <ol className="list-decimal list-inside space-y-0.5 text-slate pl-1">
+              <li>한글 프로그램에서 파일을 열고 암호를 입력합니다.</li>
+              <li>상단 메뉴 <strong>[보안]</strong> (또는 [파일]) 클릭</li>
+              <li><strong>[문서 암호 변경/해제]</strong> → <strong>[암호 해제]</strong> 선택 후 [저장]</li>
+            </ol>
+            <div className="text-[11px] text-pebble pt-0.5">
+              ※ 배포용 문서: [보안] → [배포용 문서 변경/해제] 클릭
+            </div>
+          </div>
+
+          {/* 엑셀 안내 */}
+          <div className="bg-white/95 p-3.5 rounded-md border border-amber-200 text-xs leading-relaxed space-y-1">
+            <div className="font-bold text-emerald-900 flex items-center gap-1.5">
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+              <span>엑셀(XLSX, XLS) 10초 암호 해제:</span>
+            </div>
+            <ol className="list-decimal list-inside space-y-0.5 text-slate pl-1">
+              <li>엑셀에서 파일을 열고 암호를 입력합니다.</li>
+              <li>좌측 상단 <strong>[파일]</strong> → <strong>[정보]</strong> 클릭</li>
+              <li><strong>[통합 문서 보호]</strong> → <strong>[암호 설정]</strong> 클릭</li>
+              <li>입력란의 동그라미(●●●●) 암호를 지우고 [확인] 후 [저장]</li>
+            </ol>
           </div>
         </div>
       </div>
@@ -218,7 +239,7 @@ export const PasswordDecryptor: React.FC = () => {
         {/* Step 1: File Upload Box */}
         <div className="mb-6">
           <label className="block text-sm font-bold text-forest-ink mb-2">
-            1. 암호가 설정된 문서 파일 선택
+            1. 암호가 설정된 PDF 파일 선택
           </label>
 
           <div
@@ -238,7 +259,7 @@ export const PasswordDecryptor: React.FC = () => {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.xlsx,.xls,.hwp,.hwpx"
+              accept=".pdf"
               onChange={handleFileInput}
               className="hidden"
             />
@@ -252,18 +273,32 @@ export const PasswordDecryptor: React.FC = () => {
                   {selectedFile.name}
                 </div>
                 <div className="text-xs text-slate mb-3">
-                  {(selectedFile.size / 1024).toFixed(1)} KB · 파일 준비 완료
+                  {(selectedFile.size / 1024).toFixed(1)} KB · PDF 파일 준비 완료
                 </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleReset();
-                  }}
-                  className="px-3 py-1 rounded-pill bg-fog text-charcoal hover:bg-pebble/20 text-xs font-semibold"
-                >
-                  다른 파일 선택
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openPdfInBrowser();
+                    }}
+                    className="px-3.5 py-1 rounded-pill bg-forest-ink text-lime-voltage hover:bg-forest-dark text-xs font-bold flex items-center gap-1 shadow-sm"
+                    title="브라우저에서 직접 열어 인쇄(Ctrl+P)로 암호 없이 저장"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>브라우저 뷰어로 열기</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleReset();
+                    }}
+                    className="px-3 py-1 rounded-pill bg-fog text-charcoal hover:bg-pebble/20 text-xs font-semibold"
+                  >
+                    다른 파일 선택
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="flex flex-col items-center">
@@ -271,10 +306,10 @@ export const PasswordDecryptor: React.FC = () => {
                   <UploadCloud className="w-6 h-6 stroke-[2]" />
                 </div>
                 <div className="text-base font-bold text-forest-ink mb-1">
-                  클릭하여 파일을 선택하거나 이곳으로 드래그 앤 드롭
+                  클릭하여 PDF 파일을 선택하거나 이곳으로 드래그 앤 드롭
                 </div>
-                <div className="text-xs text-slate mb-3">
-                  지원 형식: 한글(HWP, HWPX), 엑셀(XLSX, XLS), PDF
+                <div className="text-xs text-slate mb-2">
+                  지원 형식: <strong>PDF 문서 (.pdf)</strong>
                 </div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-pill bg-fog text-[11px] font-semibold text-charcoal">
                   <span>최대 50MB 지원</span>
@@ -288,7 +323,7 @@ export const PasswordDecryptor: React.FC = () => {
         <form onSubmit={handleDecrypt} className="space-y-6">
           <div>
             <label className="block text-sm font-bold text-forest-ink mb-2">
-              2. 해당 문서의 기존 비밀번호 입력
+              2. 해당 PDF 문서의 기존 비밀번호 입력 (열기 또는 권한 암호)
             </label>
             <div className="relative">
               <KeyRound className="w-4 h-4 text-pebble absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -296,7 +331,7 @@ export const PasswordDecryptor: React.FC = () => {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="문서에 설정되어 있는 기존 비밀번호를 입력하세요"
+                placeholder="문서에 설정된 비밀번호를 입력하세요 (비밀번호를 모르면 브라우저 뷰어를 이용)"
                 className="w-full pl-10 pr-12 py-3 rounded-input border border-pebble/60 focus:border-forest-ink focus:outline-none text-sm transition-all text-charcoal"
                 disabled={isProcessing}
               />
@@ -310,17 +345,17 @@ export const PasswordDecryptor: React.FC = () => {
               </button>
             </div>
             <p className="text-[11px] text-slate mt-1.5">
-              ※ 올바른 비밀번호를 입력해야 온전한 파일로 암호가 해제됩니다.
+              ※ 열기 암호(생년월일/사업자번호 등)를 입력하시면 암호 해제를 시도합니다.
             </p>
           </div>
 
-          {/* Action Button */}
+          {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <button
               type="submit"
-              disabled={!selectedFile || isProcessing || !password.trim()}
+              disabled={!selectedFile || isProcessing}
               className={`w-full sm:w-auto px-8 py-3 rounded-pill font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-sm ${
-                !selectedFile || isProcessing || !password.trim()
+                !selectedFile || isProcessing
                   ? 'bg-fog text-pebble cursor-not-allowed'
                   : 'bg-lime-voltage hover:bg-lime-hover text-forest-ink shadow-lime-voltage/20 active:scale-95'
               }`}
@@ -328,26 +363,42 @@ export const PasswordDecryptor: React.FC = () => {
               {isProcessing ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin text-forest-ink" />
-                  <span>문서 암호 해제 처리 중...</span>
+                  <span>PDF 암호 해제 처리 중...</span>
                 </>
               ) : (
                 <>
                   <FolderLock className="w-4 h-4 stroke-[2.5]" />
-                  <span>암호 해제 및 다운로드</span>
+                  <span>PDF 암호 해제 시도</span>
                 </>
               )}
             </button>
 
-            <button
-              type="button"
-              onClick={createTestProtectedFile}
-              className="w-full sm:w-auto px-4 py-3 rounded-pill bg-fog hover:bg-pebble/20 text-charcoal text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-forest-ink" />
-              <span>실습용 샘플 파일 다운받기 (암호: 1234)</span>
-            </button>
+            {selectedFile && (
+              <button
+                type="button"
+                onClick={openPdfInBrowser}
+                className="w-full sm:w-auto px-5 py-3 rounded-pill bg-linen-mist hover:bg-lime-voltage/60 text-forest-ink text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+              >
+                <Printer className="w-4 h-4" />
+                <span>가장 확실한 방법: 브라우저 뷰어에서 1초 인쇄 저장</span>
+              </button>
+            )}
           </div>
         </form>
+
+        {/* 100% 무암호 추출 보장 안내 박스 */}
+        <div className="mt-6 p-4 rounded-card bg-linen-light border border-lime-voltage/30 text-xs text-forest-ink space-y-1.5">
+          <div className="font-bold flex items-center gap-1.5">
+            <HelpCircle className="w-4 h-4" />
+            <span>💡 글자/양식 손실 없이 100% 암호 없는 PDF로 만드는 표준 방법:</span>
+          </div>
+          <ol className="list-decimal list-inside space-y-1 text-slate-700 pl-1 leading-relaxed">
+            <li>위의 <strong>[브라우저 뷰어로 열기]</strong>를 누르면 새 탭에서 PDF가 열립니다.</li>
+            <li>문서 암호를 입력하여 내용이 온전히 보이면 <strong>Ctrl + P (인쇄)</strong>를 누릅니다.</li>
+            <li>인쇄 대상을 <strong>[PDF로 저장]</strong>으로 변경하고 [저장]을 클릭합니다.</li>
+            <li>👉 생성된 새 파일은 **비밀번호가 100% 완전히 사라진 깨끗한 PDF**가 됩니다!</li>
+          </ol>
+        </div>
 
         {/* Status Message / Result Box */}
         {resultState.status === 'SUCCESS' && (
@@ -355,7 +406,7 @@ export const PasswordDecryptor: React.FC = () => {
             <div className="flex items-start gap-3">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
               <div className="flex-1">
-                <h4 className="text-sm font-bold text-emerald-950 mb-1">암호 해제 성공!</h4>
+                <h4 className="text-sm font-bold text-emerald-950 mb-1">암호 해제 처리 완료!</h4>
                 <p className="text-xs text-emerald-800 mb-3">{resultState.message}</p>
                 {resultState.blob && resultState.outputName && (
                   <button
@@ -372,17 +423,17 @@ export const PasswordDecryptor: React.FC = () => {
         )}
 
         {resultState.status === 'ERROR' && (
-          <div className="mt-6 p-5 rounded-card bg-amber-50/80 border border-amber-300 text-charcoal animate-in fade-in-50 space-y-3">
+          <div className="mt-6 p-5 rounded-card bg-amber-50/90 border border-amber-300 text-charcoal animate-in fade-in-50 space-y-3">
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
               <div>
-                <h4 className="text-sm font-bold text-amber-950 mb-1">암호 해제 안내</h4>
+                <h4 className="text-sm font-bold text-amber-950 mb-1">안내</h4>
                 <p className="text-xs text-amber-900 leading-relaxed">{resultState.message}</p>
               </div>
             </div>
 
             {resultState.actionGuide && (
-              <div className="bg-white/80 p-4 rounded-md border border-amber-200 text-xs text-charcoal whitespace-pre-wrap font-mono leading-relaxed">
+              <div className="bg-white/90 p-4 rounded-md border border-amber-200 text-xs text-charcoal whitespace-pre-wrap font-mono leading-relaxed">
                 {resultState.actionGuide}
               </div>
             )}
@@ -396,7 +447,7 @@ export const PasswordDecryptor: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-bold text-forest-ink flex items-center gap-2">
               <Clock className="w-4 h-4 text-pebble" />
-              <span>최근 암호 해제 이력 (현재 세션)</span>
+              <span>최근 PDF 암호 해제 이력</span>
             </h3>
             <button
               onClick={() => saveHistory([])}
@@ -411,8 +462,8 @@ export const PasswordDecryptor: React.FC = () => {
             {history.map((item) => (
               <div key={item.id} className="py-2.5 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2.5">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-fog text-forest-ink uppercase">
-                    {item.fileType}
+                  <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200 uppercase">
+                    PDF
                   </span>
                   <div>
                     <div className="font-semibold text-charcoal">{item.fileName}</div>

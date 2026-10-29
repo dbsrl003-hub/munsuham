@@ -121,7 +121,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             <FolderLock className="w-4 h-4 flex-shrink-0" />
-            <span>문서 암호 해제</span>
+            <span>PDF 암호 해제</span>
           </button>
 
           {currentUser.role === 'ADMIN' && (
@@ -302,7 +302,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           }`}
         >
           <FolderLock className="w-3.5 h-3.5" />
-          암호해제
+          PDF 암호해제
         </button>
         {currentUser.role === 'ADMIN' && (
           <button
