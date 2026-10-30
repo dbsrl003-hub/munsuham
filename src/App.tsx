@@ -4,7 +4,6 @@ import { INITIAL_USERS, INITIAL_DOCUMENTS } from './mockData';
 import { Navbar } from './components/Navbar';
 import { HeroBanner } from './components/HeroBanner';
 import { FormVault } from './components/FormVault';
-import { PasswordDecryptor } from './components/PasswordDecryptor';
 import { AdminUserManagement } from './components/AdminUserManagement';
 import { UploadModal } from './components/UploadModal';
 import { FormDetailModal } from './components/FormDetailModal';
@@ -66,7 +65,7 @@ export const App: React.FC = () => {
   });
 
   // 5. 탭 제어
-  const [currentTab, setCurrentTab] = useState<'PUBLIC' | 'PRIVATE' | 'DECRYPT' | 'ADMIN'>('PUBLIC');
+  const [currentTab, setCurrentTab] = useState<'PUBLIC' | 'PRIVATE' | 'ADMIN'>('PUBLIC');
 
   // 6. 모달 제어
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -362,7 +361,6 @@ export const App: React.FC = () => {
                 publicCount={publicCount}
                 privateCount={privateCount}
                 totalDownloads={totalDownloads}
-                onGoDecrypt={() => setCurrentTab('DECRYPT')}
                 onGoPublic={() => setCurrentTab('PUBLIC')}
               />
             )}
@@ -412,8 +410,6 @@ export const App: React.FC = () => {
               />
             )}
 
-            {currentTab === 'DECRYPT' && <PasswordDecryptor />}
-
             {currentTab === 'ADMIN' && currentUser.role === 'ADMIN' && (
               <AdminUserManagement
                 users={users}
@@ -431,12 +427,12 @@ export const App: React.FC = () => {
       <footer className="mt-auto border-t border-fog bg-white py-8 text-xs text-pebble">
         <div className="max-w-[1280px] mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="font-extrabold text-forest-ink">복지서식함 &amp; 암호해제</span>
+            <span className="font-extrabold text-forest-ink">복지서식함</span>
             <span>·</span>
             <span>사회복지 현장 스마트 업무 솔루션</span>
           </div>
           <div className="flex items-center gap-4 text-[11px]">
-            <span>100% 브라우저 인메모리 암호해제</span>
+            <span>Supabase 클라우드 실시간 동기화</span>
             <span>·</span>
             <span>개인정보보호법 및 공문서 관리 규정 준수</span>
           </div>
