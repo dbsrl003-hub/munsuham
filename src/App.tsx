@@ -330,7 +330,7 @@ export const App: React.FC = () => {
             <h2 className="text-2xl font-black text-forest-ink mb-2">가입 승인 대기 중입니다</h2>
             <p className="text-sm text-slate leading-relaxed mb-6">
               <strong className="text-forest-ink">{currentUser.name}</strong>님의 회원가입 신청이 정상 접수되었습니다.<br />
-              사회복지 시설 보안 규정에 따라 최고 관리자(김복지 부장)의 승인 후 공용 서식함과 암호 해제 서비스를 이용하실 수 있습니다.
+              사회복지 시설 보안 규정에 따라 최고 관리자의 승인 후 기관 공용 서식함과 개인 보관함을 이용하실 수 있습니다.
             </p>
 
             <div className="bg-fog/60 p-4 rounded-card text-xs text-charcoal max-w-md mx-auto mb-6 text-left space-y-1.5">
