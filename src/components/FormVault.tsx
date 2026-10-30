@@ -43,12 +43,38 @@ export const FormVault: React.FC<FormVaultProps> = ({
   onOpenUpload,
   recentDownloads
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState<Category>('전체');
-  const [selectedFormat, setSelectedFormat] = useState<'ALL' | 'HWP' | 'XLS' | 'PDF'>('ALL');
+  const [selectedCategory, setSelectedCategory] = useState<Category>(() => {
+    return (localStorage.getItem('welfare_filter_category') as Category) || '전체';
+  });
+  const [selectedFormat, setSelectedFormat] = useState<'ALL' | 'HWP' | 'XLS' | 'PDF'>(() => {
+    return (localStorage.getItem('welfare_filter_format') as any) || 'ALL';
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [onlyBookmarks, setOnlyBookmarks] = useState(false);
-  const [sortBy, setSortBy] = useState<'NEWEST' | 'POPULAR' | 'TITLE'>('NEWEST');
-  const [viewMode, setViewMode] = useState<'GRID' | 'LIST'>('GRID');
+  const [sortBy, setSortBy] = useState<'NEWEST' | 'POPULAR' | 'TITLE'>(() => {
+    return (localStorage.getItem('welfare_filter_sort') as any) || 'NEWEST';
+  });
+  const [viewMode, setViewMode] = useState<'GRID' | 'LIST'>(() => {
+    return (localStorage.getItem('welfare_filter_view') as any) || 'GRID';
+  });
+
+  // 필터 상태 변경 핸들러 (localStorage 자동 저장)
+  const handleCategoryChange = (cat: Category) => {
+    setSelectedCategory(cat);
+    localStorage.setItem('welfare_filter_category', cat);
+  };
+  const handleFormatChange = (fmt: 'ALL' | 'HWP' | 'XLS' | 'PDF') => {
+    setSelectedFormat(fmt);
+    localStorage.setItem('welfare_filter_format', fmt);
+  };
+  const handleSortChange = (sort: 'NEWEST' | 'POPULAR' | 'TITLE') => {
+    setSortBy(sort);
+    localStorage.setItem('welfare_filter_sort', sort);
+  };
+  const handleViewModeChange = (mode: 'GRID' | 'LIST') => {
+    setViewMode(mode);
+    localStorage.setItem('welfare_filter_view', mode);
+  };
 
   // 필터링 및 정렬 파이프라인
   const filteredDocuments = useMemo(() => {
@@ -156,7 +182,7 @@ export const FormVault: React.FC<FormVaultProps> = ({
             {/* Format Dropdown/Pills */}
             <div className="flex items-center p-1 bg-fog rounded-pill text-xs font-semibold">
               <button
-                onClick={() => setSelectedFormat('ALL')}
+                onClick={() => handleFormatChange('ALL')}
                 className={`px-3 py-1.5 rounded-pill transition-all ${
                   selectedFormat === 'ALL' ? 'bg-white text-forest-ink shadow-sm' : 'text-slate hover:text-charcoal'
                 }`}
@@ -164,7 +190,7 @@ export const FormVault: React.FC<FormVaultProps> = ({
                 전체형식
               </button>
               <button
-                onClick={() => setSelectedFormat('HWP')}
+                onClick={() => handleFormatChange('HWP')}
                 className={`px-3 py-1.5 rounded-pill transition-all ${
                   selectedFormat === 'HWP' ? 'bg-white text-forest-ink shadow-sm' : 'text-slate hover:text-charcoal'
                 }`}
@@ -172,7 +198,7 @@ export const FormVault: React.FC<FormVaultProps> = ({
                 한글(HWP)
               </button>
               <button
-                onClick={() => setSelectedFormat('XLS')}
+                onClick={() => handleFormatChange('XLS')}
                 className={`px-3 py-1.5 rounded-pill transition-all ${
                   selectedFormat === 'XLS' ? 'bg-white text-forest-ink shadow-sm' : 'text-slate hover:text-charcoal'
                 }`}
@@ -180,7 +206,7 @@ export const FormVault: React.FC<FormVaultProps> = ({
                 엑셀
               </button>
               <button
-                onClick={() => setSelectedFormat('PDF')}
+                onClick={() => handleFormatChange('PDF')}
                 className={`px-3 py-1.5 rounded-pill transition-all ${
                   selectedFormat === 'PDF' ? 'bg-white text-forest-ink shadow-sm' : 'text-slate hover:text-charcoal'
                 }`}
@@ -206,7 +232,7 @@ export const FormVault: React.FC<FormVaultProps> = ({
             <div className="relative">
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
+                onChange={(e) => handleSortChange(e.target.value as any)}
                 aria-label="서식 정렬 기준"
                 className="appearance-none bg-white border border-fog hover:border-pebble text-xs font-semibold text-charcoal py-2 pl-3 pr-8 rounded-pill focus:outline-none cursor-pointer"
               >
@@ -220,7 +246,7 @@ export const FormVault: React.FC<FormVaultProps> = ({
             {/* Grid / List View Toggle */}
             <div className="hidden sm:flex items-center p-1 bg-fog rounded-pill">
               <button
-                onClick={() => setViewMode('GRID')}
+                onClick={() => handleViewModeChange('GRID')}
                 className={`p-1.5 rounded-full transition-all ${
                   viewMode === 'GRID' ? 'bg-white text-forest-ink shadow-sm' : 'text-pebble hover:text-charcoal'
                 }`}
@@ -229,7 +255,7 @@ export const FormVault: React.FC<FormVaultProps> = ({
                 <LayoutGrid className="w-3.5 h-3.5" />
               </button>
               <button
-                onClick={() => setViewMode('LIST')}
+                onClick={() => handleViewModeChange('LIST')}
                 className={`p-1.5 rounded-full transition-all ${
                   viewMode === 'LIST' ? 'bg-white text-forest-ink shadow-sm' : 'text-pebble hover:text-charcoal'
                 }`}
@@ -250,7 +276,7 @@ export const FormVault: React.FC<FormVaultProps> = ({
             {CATEGORIES.map((cat) => (
               <button
                 key={cat}
-                onClick={() => setSelectedCategory(cat)}
+                onClick={() => handleCategoryChange(cat)}
                 className={`px-3 py-1.5 rounded-pill text-xs font-semibold transition-all ${
                   selectedCategory === cat
                     ? 'bg-forest-ink text-lime-voltage font-bold shadow-sm'
@@ -302,6 +328,9 @@ export const FormVault: React.FC<FormVaultProps> = ({
                 setSelectedFormat('ALL');
                 setSearchQuery('');
                 setOnlyBookmarks(false);
+                localStorage.removeItem('welfare_filter_category');
+                localStorage.removeItem('welfare_filter_format');
+                localStorage.removeItem('welfare_filter_sort');
               }}
               className="px-4 py-2 rounded-pill bg-fog hover:bg-pebble/20 text-charcoal text-xs font-bold transition-all"
             >
