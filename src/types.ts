@@ -39,17 +39,7 @@ export interface DocumentForm {
   isPublic: boolean; // true: 기관 공용, false: 개인 양식
   downloadsCount: number;
   tags: string[];
-  sampleContentUrl?: string; // blob or simulated file data
+  sampleContentUrl?: string; // Supabase storage path or blob
   fileData?: Blob | ArrayBuffer;
   version?: string;
-}
-
-export interface DecryptHistoryItem {
-  id: string;
-  fileName: string;
-  fileType: FileType;
-  fileSize: string;
-  decryptedAt: string;
-  status: 'SUCCESS' | 'FAILED';
-  downloadUrl?: string;
 }
