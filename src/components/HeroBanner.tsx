@@ -1,11 +1,10 @@
 import React from 'react';
-import { Sparkles, Shield, DownloadCloud, FileCheck2, ArrowRight } from 'lucide-react';
+import { Sparkles, Cloud, DownloadCloud, FileCheck2, ArrowRight } from 'lucide-react';
 
 interface HeroBannerProps {
   publicCount: number;
   privateCount: number;
   totalDownloads: number;
-  onGoDecrypt: () => void;
   onGoPublic: () => void;
 }
 
@@ -13,7 +12,6 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
   publicCount,
   privateCount,
   totalDownloads,
-  onGoDecrypt,
   onGoPublic
 }) => {
   return (
@@ -27,19 +25,19 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
         <div className="max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-pill bg-lime-voltage/15 text-lime-voltage text-xs font-bold tracking-wide uppercase mb-4 border border-lime-voltage/20">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>사회복지 시설 실무자 통합 플랫폼</span>
+            <span>사회복지 시설 실무자 서식 공유 플랫폼</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl font-black text-paper tracking-tight leading-[1.2] mb-4">
-            사업 양식과 암호해제를<br className="hidden sm:block" />{' '}
+            사업 양식과 공용 서식을<br className="hidden sm:block" />{' '}
             <span className="text-lime-voltage underline decoration-lime-voltage/30 underline-offset-8 inline-block mt-1 sm:mt-2">
               단 한 곳에서
             </span>
           </h1>
 
           <p className="text-base sm:text-lg text-slate-200/90 font-normal leading-relaxed max-w-xl">
-            한글(HWP/HWPX), 엑셀, PDF 양식을 손쉽게 보관하고 공유하세요.
-            비밀번호 걸린 공문서도 브라우저에서 안전하게 원클릭으로 해제할 수 있습니다.
+            한글(HWP/HWPX), 엑셀, PDF 양식을 손쉽게 보관하고 동료들과 안전하게 공유하세요.
+            클라우드와 자동 동기화되어 언제 어디서든 필요한 서식을 즉시 다운로드할 수 있습니다.
           </p>
 
           {/* Action Buttons */}
@@ -50,12 +48,6 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
             >
               <span>공용 서식 둘러보기</span>
               <ArrowRight className="w-4 h-4 stroke-[2.5]" />
-            </button>
-            <button
-              onClick={onGoDecrypt}
-              className="px-6 py-3 rounded-pill bg-transparent hover:bg-white/10 text-paper border border-paper/30 font-semibold text-sm sm:text-base transition-all flex items-center gap-2"
-            >
-              <span>PDF 암호 해제 바로가기</span>
             </button>
           </div>
         </div>
@@ -68,7 +60,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
               <FileCheck2 className="w-4 h-4 text-lime-voltage" />
             </div>
             <div className="text-3xl font-black text-lime-voltage">{publicCount}</div>
-            <span className="text-[11px] text-slate-300">검증된 현장 표준 문서</span>
+            <span className="text-[11px] text-slate-300">등록된 현장 표준 문서</span>
           </div>
 
           <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-card p-4 hover:border-lime-voltage/40 transition-all">
@@ -82,11 +74,11 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
 
           <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-card p-4 hover:border-lime-voltage/40 transition-all col-span-2 sm:col-span-1 lg:col-span-2">
             <div className="flex items-center gap-2 text-xs text-slate-200 mb-1">
-              <Shield className="w-4 h-4 text-lime-voltage" />
-              <span className="font-semibold text-paper">100% 클라이언트 인메모리 처리</span>
+              <Cloud className="w-4 h-4 text-lime-voltage" />
+              <span className="font-semibold text-paper">Supabase 클라우드 실시간 보관</span>
             </div>
             <p className="text-[11px] text-slate-300 leading-normal">
-              암호 해제 시 파일이 외부 서버로 전송되지 않아 개인정보와 기관 기밀이 안전하게 보호됩니다.
+              등록된 모든 서식 원본 파일이 클라우드 스토리지에 안전하게 보관되어 컴퓨터 변경 시에도 안전합니다.
             </p>
           </div>
         </div>
