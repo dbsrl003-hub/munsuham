@@ -1,13 +1,12 @@
 import React from 'react';
 import { User, UserRole } from '../types';
 import { 
-  FolderLock, 
   Users, 
   FileText, 
   UserCheck, 
   ShieldCheck, 
   PlusCircle, 
-  ChevronDown,
+  ChevronDown, 
   Lock,
   FolderOpen,
   Cloud
@@ -17,8 +16,8 @@ interface NavbarProps {
   currentUser: User;
   onSwitchUser: (user: User) => void;
   allUsers: User[];
-  currentTab: 'PUBLIC' | 'PRIVATE' | 'DECRYPT' | 'ADMIN';
-  onSelectTab: (tab: 'PUBLIC' | 'PRIVATE' | 'DECRYPT' | 'ADMIN') => void;
+  currentTab: 'PUBLIC' | 'PRIVATE' | 'ADMIN';
+  onSelectTab: (tab: 'PUBLIC' | 'PRIVATE' | 'ADMIN') => void;
   onOpenUploadModal: () => void;
   pendingCount: number;
   isCloudConnected: boolean;
@@ -82,7 +81,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="font-extrabold text-lg sm:text-xl tracking-tight text-forest-ink group-hover:text-spruce transition-colors">복지서식함</span>
               <span className="text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded bg-lime-voltage/30 text-forest-ink uppercase">VAULT</span>
             </div>
-            <p className="text-[10px] text-slate hidden md:block">사회복지 공용 서식 &amp; 암호 해제 플랫폼</p>
+            <p className="text-[10px] text-slate hidden md:block">사회복지 현장 공용 서식 보관 플랫폼</p>
           </div>
         </div>
 
@@ -110,18 +109,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <FileText className="w-4 h-4 flex-shrink-0" />
             <span>개인 보관함</span>
-          </button>
-
-          <button
-            onClick={() => onSelectTab('DECRYPT')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-pill text-xs sm:text-sm font-semibold transition-all whitespace-nowrap ${
-              currentTab === 'DECRYPT'
-                ? 'bg-lime-voltage text-forest-ink shadow-sm'
-                : 'text-charcoal hover:text-forest-ink hover:bg-white/60'
-            }`}
-          >
-            <FolderLock className="w-4 h-4 flex-shrink-0" />
-            <span>PDF 암호 해제</span>
           </button>
 
           {currentUser.role === 'ADMIN' && (
@@ -294,15 +281,6 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           <FileText className="w-3.5 h-3.5" />
           개인서식
-        </button>
-        <button
-          onClick={() => onSelectTab('DECRYPT')}
-          className={`flex items-center gap-1 text-xs font-semibold py-1.5 px-3 rounded-pill whitespace-nowrap ${
-            currentTab === 'DECRYPT' ? 'bg-lime-voltage text-forest-ink' : 'text-slate'
-          }`}
-        >
-          <FolderLock className="w-3.5 h-3.5" />
-          PDF 암호해제
         </button>
         {currentUser.role === 'ADMIN' && (
           <button
