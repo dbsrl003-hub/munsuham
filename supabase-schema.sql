@@ -1,6 +1,24 @@
 -- ==============================================================================
--- 복지서식함 & 암호해제 대시보드 - Supabase 통합 데이터베이스 & 스토리지 스키마
--- 사용법: Supabase Dashboard -> SQL Editor에 복사하여 [Run] 버튼을 누르세요.
+-- [중요] 기존 Supabase 데이터베이스 카테고리 업데이트 마이그레이션 쿼리
+-- Supabase 대시보드 -> SQL Editor에 붙여넣고 [Run] 실행하세요!
+-- ==============================================================================
+
+-- 1. 기존 category check 제약조건 제거
+ALTER TABLE public.documents DROP CONSTRAINT IF EXISTS documents_category_check;
+
+-- 2. 기존 데이터의 카테고리 이름을 새로운 6개 카테고리로 변경
+UPDATE public.documents SET category = '이용자' WHERE category = '사례관리' OR category = '프로그램/기획';
+UPDATE public.documents SET category = '회계서류' WHERE category = '회계/정산';
+UPDATE public.documents SET category = '행정서류' WHERE category = '행정/인사' OR category = '시설/안전';
+UPDATE public.documents SET category = '기타' WHERE category NOT IN ('이용자', '활동지원사', '회계서류', '행정서류', '후원/홍보', '기타');
+
+-- 3. 새로운 카테고리 CHECK 제약조건 등록
+ALTER TABLE public.documents 
+ADD CONSTRAINT documents_category_check 
+CHECK (category IN ('이용자', '활동지원사', '회계서류', '행정서류', '후원/홍보', '기타'));
+
+-- ==============================================================================
+-- 전체 통합 테이블 및 스토리지 스키마 (신규 구축 시 참고용)
 -- ==============================================================================
 
 -- 1. 사용자/직원 프로필 테이블 (profiles)
@@ -21,7 +39,7 @@ CREATE TABLE IF NOT EXISTS public.documents (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   description TEXT,
-  category TEXT NOT NULL CHECK (category IN ('사례관리', '프로그램/기획', '회계/정산', '행정/인사', '시설/안전', '후원/홍보')),
+  category TEXT NOT NULL CHECK (category IN ('이용자', '활동지원사', '회계서류', '행정서류', '후원/홍보', '기타')),
   file_type TEXT NOT NULL CHECK (file_type IN ('hwp', 'hwpx', 'xlsx', 'xls', 'pdf')),
   file_name TEXT NOT NULL,
   file_size TEXT NOT NULL,
