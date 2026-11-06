@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { DocumentForm, User, UserRole } from '../types';
+import { DocumentForm, User, UserRole, Category } from '../types';
 
 // 환경 변수 또는 로컬스토리지에 저장된 설정 조회
 const getEnv = (key: string) => {
@@ -38,6 +38,19 @@ export const clearSupabaseCredentials = () => {
   localStorage.removeItem('VITE_SUPABASE_ANON_KEY');
   clientInstance = null;
 };
+
+// 구버전 카테고리명을 최신 카테고리명으로 자동 정규화
+function normalizeCategory(rawCat: string): Exclude<Category, '전체'> {
+  if (rawCat === '사례관리') return '이용자';
+  if (rawCat === '회계/정산') return '회계서류';
+  if (rawCat === '행정/인사') return '행정서류';
+  if (rawCat === '프로그램/기획') return '이용자';
+  if (rawCat === '시설/안전') return '행정서류';
+  if (['이용자', '활동지원사', '회계서류', '행정서류', '후원/홍보', '기타'].includes(rawCat)) {
+    return rawCat as Exclude<Category, '전체'>;
+  }
+  return '기타';
+}
 
 // ==========================================
 // 1. Supabase Storage 파일 업로드 / 다운로드
@@ -116,7 +129,7 @@ export async function fetchDocumentsFromSupabase(): Promise<DocumentForm[] | nul
       id: row.id,
       title: row.title,
       description: row.description || '',
-      category: row.category,
+      category: normalizeCategory(row.category),
       fileType: row.file_type,
       fileName: row.file_name,
       fileSize: row.file_size,
@@ -140,12 +153,12 @@ export async function fetchDocumentsFromSupabase(): Promise<DocumentForm[] | nul
 export async function insertDocumentToSupabase(
   doc: DocumentForm,
   storagePath?: string
-): Promise<boolean> {
+): Promise<{ success: boolean; error?: string }> {
   const supabase = getSupabaseClient();
-  if (!supabase) return false;
+  if (!supabase) return { success: false, error: 'Supabase가 설정되지 않았습니다.' };
 
   try {
-    const { error } = await supabase.from('documents').insert({
+    const { error } = await supabase.from('documents').upsert({
       id: doc.id,
       title: doc.title,
       description: doc.description,
@@ -167,12 +180,12 @@ export async function insertDocumentToSupabase(
 
     if (error) {
       console.error('서식 등록 실패:', error);
-      return false;
+      return { success: false, error: error.message };
     }
-    return true;
-  } catch (err) {
+    return { success: true };
+  } catch (err: any) {
     console.error('서식 등록 예외:', err);
-    return false;
+    return { success: false, error: err?.message || String(err) };
   }
 }
 
