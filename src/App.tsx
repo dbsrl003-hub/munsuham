@@ -188,7 +188,10 @@ export const App: React.FC = () => {
 
       setDocuments(prev => prev.map(d => (d.id === docId ? updated : d)));
       if (isSupabaseConfigured()) {
-        await insertDocumentToSupabase(updated, storagePath);
+        const res = await insertDocumentToSupabase(updated, storagePath);
+        if (!res.success) {
+          alert(`Supabase 저장 실패: ${res.error}\n(SQL Editor에서 카테고리 제약조건 업데이트가 필요할 수 있습니다.)`);
+        }
       }
       setEditingDoc(null);
     } else {
@@ -229,7 +232,10 @@ export const App: React.FC = () => {
       setDocuments(prev => [newDoc, ...prev]);
 
       if (isSupabaseConfigured()) {
-        await insertDocumentToSupabase(newDoc, storagePath);
+        const res = await insertDocumentToSupabase(newDoc, storagePath);
+        if (!res.success) {
+          alert(`Supabase 저장 실패: ${res.error}\n(SQL Editor에서 카테고리 제약조건 업데이트가 필요할 수 있습니다.)`);
+        }
       }
     }
   };
