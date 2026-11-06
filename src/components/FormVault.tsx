@@ -80,10 +80,12 @@ export const FormVault: React.FC<FormVaultProps> = ({
   const filteredDocuments = useMemo(() => {
     return documents.filter((doc) => {
       // 1. 공용 vs 개인 탭 분기
-      if (activeTab === 'PUBLIC' && !doc.isPublic) return false;
-      if (activeTab === 'PRIVATE') {
-        // 개인 양식은 본인이 작성했거나 비공개 양식인 경우
-        if (doc.authorId !== currentUser.id && doc.isPublic) return false;
+      if (activeTab === 'PUBLIC') {
+        // 공용 서식함: 전체 공개 문서만 표시
+        if (!doc.isPublic) return false;
+      } else if (activeTab === 'PRIVATE') {
+        // 나의 개인 보관함: 로그인한 사용자가 등록한 비공개 개인 문서만 표시
+        if (doc.isPublic || doc.authorId !== currentUser.id) return false;
       }
 
       // 2. 카테고리 필터
