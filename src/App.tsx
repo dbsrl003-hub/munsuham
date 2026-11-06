@@ -33,7 +33,7 @@ export const App: React.FC = () => {
 
   // 세션 복원 또는 기본 admin 자동 세션
   const [currentUser, setCurrentUser] = useState<User>(() => {
-    const savedSession = localStorage.getItem('welfare_auth_session');
+    const savedSession = localStorage.getItem('welfare_auth_session') || sessionStorage.getItem('welfare_auth_session');
     if (savedSession) {
       try {
         return JSON.parse(savedSession);
@@ -455,6 +455,7 @@ export const App: React.FC = () => {
         onSubmit={handleSaveDocument}
         currentUser={currentUser}
         editDocument={editingDoc}
+        defaultIsPublic={currentTab === 'PUBLIC'}
       />
 
       {/* Detail Modal */}
