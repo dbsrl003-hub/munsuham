@@ -19,6 +19,7 @@ interface UploadModalProps {
   onSubmit: (formData: Partial<DocumentForm>, file?: File) => void;
   currentUser: User;
   editDocument?: DocumentForm | null;
+  defaultIsPublic?: boolean;
 }
 
 export const UploadModal: React.FC<UploadModalProps> = ({
@@ -26,13 +27,14 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   onClose,
   onSubmit,
   currentUser,
-  editDocument
+  editDocument,
+  defaultIsPublic = true
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<Exclude<Category, '전체'>>('이용자');
   const [fileType, setFileType] = useState<FileType>('hwp');
-  const [isPublic, setIsPublic] = useState(true);
+  const [isPublic, setIsPublic] = useState(defaultIsPublic);
   const [tagsInput, setTagsInput] = useState('');
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
 
@@ -50,11 +52,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({
       setDescription('');
       setCategory('이용자');
       setFileType('hwp');
-      setIsPublic(true);
+      setIsPublic(defaultIsPublic);
       setTagsInput('');
       setAttachedFile(null);
     }
-  }, [editDocument, isOpen]);
+  }, [editDocument, isOpen, defaultIsPublic]);
 
   if (!isOpen) return null;
 
